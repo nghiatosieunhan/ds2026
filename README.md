@@ -11,4 +11,4 @@ Student Info
 
 * Student Name: Tran Minh Nghia
 * Student ID: 22BA13237
-* Student Group ID: Not-for-now
+* Student Group ID: 14
