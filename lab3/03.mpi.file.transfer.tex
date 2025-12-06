@@ -1,0 +1,84 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\title{Practical Work 3: MPI File Transfer}
+\author{Tran Minh Nghia - 22BA13237}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Choice of MPI Implementation}
+This implementation uses \textbf{mpi4py}, a Python binding for the MPI standard. The choice was made for the following reasons:
+\begin{itemize}
+    \item It provides a clean, Pythonic interface to standard MPI operations.
+    \item It supports automatic serialization of Python objects, simplifying data transfer.
+    \item The concepts and APIs align with MPI implementations in C/C++, making the knowledge transferable.
+\end{itemize}
+
+\section{MPI Design}
+MPI follows the SPMD (Single Program, Multiple Data) model, where the same program runs on multiple processes, each identified by a unique rank. The behavior of each process is determined by its rank value.
+
+For file transfer, we use point-to-point communication:
+\begin{itemize}
+    \item \textbf{Rank 0}: Acts as the sender. Reads the file and transmits it to Rank 1.
+    \item \textbf{Rank 1}: Acts as the receiver. Waits for the file data and saves it locally.
+\end{itemize}
+
+Messages are distinguished using tags: tag 0 for the filename, tag 1 for the file content.
+
+\section{System Organization}
+The system requires exactly two MPI processes. Both processes execute the same code, but their behavior differs based on rank:
+\begin{itemize}
+    \item Process 0 initiates the transfer by calling \texttt{comm.send()}.
+    \item Process 1 waits for incoming data using \texttt{comm.recv()}.
+\end{itemize}
+
+The program is executed using: \texttt{mpiexec -n 2 python transfer.py <filename>}
+
+\section{Implementation}
+The implementation uses \texttt{MPI.COMM\_WORLD} for communication between processes:
+\begin{lstlisting}
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+
+if rank == 0:
+    # Sender
+    with open(filename, 'rb') as f:
+        content = f.read()
+    comm.send(filename, dest=1, tag=0)
+    comm.send(content, dest=1, tag=1)
+    
+elif rank == 1:
+    # Receiver
+    filename = comm.recv(source=0, tag=0)
+    content = comm.recv(source=0, tag=1)
+    with open('received_' + filename, 'wb') as f:
+        f.write(content)
+\end{lstlisting}
+
+\end{document}

@@ -1,0 +1,89 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\title{Practical Work 1: TCP File Transfer}
+\author{Tran Minh Nghia - 22BA13237}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Protocol Design}
+This implementation uses TCP (Transmission Control Protocol) for reliable file transfer between two endpoints. TCP ensures that all data arrives correctly and in order, making it ideal for file transfer applications.
+
+The transfer process follows these steps:
+\begin{enumerate}
+    \item The server creates a socket, binds it to a specific address and port, then listens for connections.
+    \item The client establishes a connection to the server.
+    \item The client reads the file in chunks and sends each chunk through the socket.
+    \item The server receives the data and writes it to a local file.
+    \item The connection is closed when all data has been transferred.
+\end{enumerate}
+
+\section{System Organization}
+The system consists of two components:
+\begin{itemize}
+    \item \textbf{Server}: Listens on port 8080 for incoming connections. Upon accepting a connection, it receives the file data and saves it as \texttt{received\_file.txt}.
+    \item \textbf{Client}: Connects to the server, reads the specified file, and transmits its contents over the established connection.
+\end{itemize}
+
+TCP handles reliability automatically through built-in acknowledgment and retransmission mechanisms, so neither the client nor server needs to implement error recovery.
+
+\section{Implementation}
+
+\subsection{Server}
+The server uses blocking I/O to wait for connections and receive data:
+\begin{lstlisting}
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind((HOST, PORT))
+    s.listen()
+    
+    conn, addr = s.accept()
+    with conn:
+        with open('received_file.txt', 'wb') as f:
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                f.write(data)
+\end{lstlisting}
+
+\subsection{Client}
+The client reads the file in 1024-byte chunks and sends each chunk to the server:
+\begin{lstlisting}
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+    
+    with open(filename, 'rb') as f:
+        while True:
+            data = f.read(1024)
+            if not data:
+                break
+            s.sendall(data)
+\end{lstlisting}
+
+\end{document}

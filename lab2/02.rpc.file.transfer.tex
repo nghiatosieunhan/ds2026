@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\title{Practical Work 2: RPC File Transfer}
+\author{Tran Minh Nghia - 22BA13237}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{RPC Design}
+Remote Procedure Call (RPC) provides a higher level of abstraction compared to raw sockets. Instead of manually handling data serialization and network communication, RPC allows the client to invoke functions on the server as if they were local calls.
+
+This implementation uses XML-RPC, a protocol that encodes function calls as XML messages and transmits them over HTTP. Python provides built-in support through the \texttt{xmlrpc} module.
+
+The service exposes one method:
+\begin{itemize}
+    \item \texttt{save\_file(filename, data)}: Accepts a filename (string) and binary content, saves the file on the server, and returns a boolean indicating success.
+\end{itemize}
+
+\section{System Organization}
+The architecture follows a standard RPC client-server model:
+\begin{itemize}
+    \item \textbf{Server}: Registers the \texttt{save\_file} function and listens for XML-RPC requests on port 8080. When a request arrives, the server deserializes the parameters, executes the function, and returns the result.
+    \item \textbf{Client}: Creates a proxy object that represents the remote server. Method calls on this proxy are automatically converted to network requests.
+\end{itemize}
+
+The main advantage of RPC over raw sockets is transparency --- the client code looks almost identical to a local function call, while the library handles all network details.
+
+\section{Implementation}
+
+\subsection{Server}
+The server registers a function and runs indefinitely:
+\begin{lstlisting}
+def save_file(filename, data):
+    with open(filename, 'wb') as f:
+        f.write(data.data)
+    return True
+
+with SimpleXMLRPCServer((HOST, PORT)) as server:
+    server.register_function(save_file, 'save_file')
+    server.serve_forever()
+\end{lstlisting}
+
+\subsection{Client}
+The client creates a proxy and calls the remote method directly:
+\begin{lstlisting}
+proxy = xmlrpc.client.ServerProxy(f'http://{HOST}:{PORT}')
+
+with open(filename, 'rb') as f:
+    content = f.read()
+
+# Binary wrapper ensures proper encoding for transmission
+proxy.save_file(filename, xmlrpc.client.Binary(content))
+\end{lstlisting}
+
+\end{document}
